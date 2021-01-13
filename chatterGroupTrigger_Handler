@@ -1,0 +1,38 @@
+/*************************************************************************************************************
+* @Class Name     : chatterGroupTrigger_Handler
+* @author         : Vinod Jakore
+* @CreatedDate -  : 05/03/2020 
+* @Description	  : Trigger handler class to handle after insert and after delete events 
+***************************************************************************************************************/
+
+
+public class chatterGroupTrigger_Handler {
+    
+    boolean removeUser ;
+    Map<Id,Id> mapOfChatterUserIdGroupId = new Map<Id,Id>();
+    Map<Id,Id> mapOfChatterUserRemovedGroupId = new Map<Id,Id>();
+    
+    public void afterInsert(List<CollaborationGroupMember> newList)
+    {	
+        removeUser = FALSE;
+        
+        for(CollaborationGroupMember cgm : newList){
+            mapOfChatterUserIdGroupId.put(cgm.MemberId,cgm.CollaborationGroupId );
+        }
+        
+        chatterGroupTrigger_Helper.manageGroupMember(mapOfChatterUserIdGroupId,removeUser);
+        
+    }
+    
+    public void afterDelete( List<CollaborationGroupMember> oldList)
+    {	
+        removeUser = TRUE;
+        
+        for(CollaborationGroupMember cgm : oldList){
+            mapOfChatterUserRemovedGroupId.put(cgm.MemberId,cgm.CollaborationGroupId );
+        }
+        
+        chatterGroupTrigger_Helper.manageGroupMember(mapOfChatterUserRemovedGroupId,removeUser);
+        
+    }
+}
