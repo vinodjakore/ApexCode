@@ -1,0 +1,110 @@
+/*************************************************************************************************************
+* @Trigger Name   : chatterGroupTrigger_Helper
+* @author         : Vinod Jakore
+* @CreatedDate -  : 05/03/2020 
+* @Description	  : chatterGroupTrigger_Helper class add/remove public group member when chatter group members added or removed.
+*  					
+***************************************************************************************************************/
+
+public class chatterGroupTrigger_Helper {
+    
+    @future
+    // Handles the CollaborationGroupMember after an insert and after delete event 
+    public static void manageGroupMember( Map<Id,Id> chatterMemberGroupIds, Boolean removeUser ){
+        
+        if(!removeUser){
+            
+            Map<String,Id> mapOfChatterGroupIdGroupName = new Map<String,Id>();
+            Map<Id,Id> mapOfChatterGroupIdMemberId = new Map<Id,Id>();
+            Map<Id,String> mapOfMemberIdChatterGroupName = new Map<Id,String>();
+            Map<String,Id> mapOfMatchedGroupIdName = new Map<String,Id>();
+            Map<String,Id> mapOfPublicGroupIdName = new Map<String,Id>();
+            List<GroupMember> listOfPublicGroupMembersToInsert = new List<GroupMember>();
+            List<Group> listOfPublicGroupToCreate = new List<Group>();
+            Set<String> groupNames = new Set<String>();
+            
+            List<CollaborationGroupMember> listOfChatterGroupMembers =[Select Id,CollaborationGroupId,CollaborationGroup.Name,MemberId FROM CollaborationGroupMember Where MemberId IN :chatterMemberGroupIds.keySet() AND CollaborationGroup.Id IN :chatterMemberGroupIds.values()];
+            
+            for(CollaborationGroupMember cg:listOfChatterGroupMembers ) {
+                mapOfChatterGroupIdMemberId.put(cg.CollaborationGroupId,cg.MemberId);
+                mapOfChatterGroupIdGroupName.put(cg.collaborationGroup.Name,cg.CollaborationGroupId);
+                mapOfMemberIdChatterGroupName.put(cg.MemberId, cg.collaborationGroup.Name);
+            }
+            
+            //Get the public groups matching with Chatter group name
+            for(Group gp: [SELECT Id,Name From Group WHERE Name IN :mapOfChatterGroupIdGroupName.keyset()]){
+                mapOfMatchedGroupIdName.put(gp.Name,gp.Id);
+            }
+            
+            for(CollaborationGroupMember chatterMember:listOfChatterGroupMembers ) {
+                
+                //add chatter members in public group when public group name is same as chatter group name
+                if(mapOfMatchedGroupIdName.containskey(mapOfMemberIdChatterGroupName.get(chatterMember.MemberId))){
+                    system.debug('inside matched group'+chatterMember);
+                    
+                    GroupMember gm = new GroupMember();
+                    gm.GroupId = mapOfMatchedGroupIdName.get(mapOfMemberIdChatterGroupName.get(chatterMember.MemberId));
+                    gm.UserOrGroupId = chatterMember.MemberId ;
+                    listOfPublicGroupMembersToInsert.add(gm);
+                    
+                }else{
+                    groupNames.add(chatterMember.CollaborationGroup.Name);
+                }
+                
+            }
+            //Create public group when matching chatter group not found
+            if(!groupNames.isEmpty()){
+                for(String str:groupNames){
+                    Group createGroup = new Group();
+                    createGroup.Name=str;
+                    listOfPublicGroupToCreate.add(createGroup);
+                }
+            }
+            
+            if(!listOfPublicGroupToCreate.isEmpty()){
+                try{
+                    Database.insert(listOfPublicGroupToCreate, FALSE);
+                }catch(Exception e){
+                    System.debug('Failed to insert public group record reason:'+e.getMessage());
+                }
+            }
+            
+            for(Group gp:[SELECT Id,Name FROM Group WHERE Group.Name IN :groupNames]){
+                mapOfPublicGroupIdName.put(gp.Name,gp.Id);
+            }
+            
+            
+            for(CollaborationGroupMember member : listOfChatterGroupMembers){
+                if(mapOfPublicGroupIdName.containskey(mapOfMemberIdChatterGroupName.get(member.MemberId))){
+                    GroupMember gm = new GroupMember();
+                    gm.GroupId = mapOfPublicGroupIdName.get(mapOfMemberIdChatterGroupName.get(member.MemberId));
+                    gm.UserOrGroupId = member.MemberId;
+                    listOfPublicGroupMembersToInsert.add(gm);
+                }
+            }
+            
+            //Insert members in the public group
+            if(!listOfPublicGroupMembersToInsert.isempty()){
+                try{
+                    Database.insert(listOfPublicGroupMembersToInsert, FALSE);
+                }catch(Exception e){
+                    System.debug('Failed to insert group member records reason:'+e.getMessage());
+                }
+            }
+            
+        }else{
+            // Get the list of members to be removed from public group
+            List<GroupMember> listOfGroupMembersToDelete = [SELECT Id,userOrGroupId From GroupMember WHERE userOrGroupId IN :chatterMemberGroupIds.keySet()];
+            
+            //Remove members from public group
+            if(!listOfGroupMembersToDelete.isEmpty()){
+                try{
+                    Delete listOfGroupMembersToDelete;
+                    
+                }catch(Exception e){
+                    System.debug('Failed to remove records :'+e.getMessage());
+                }
+            }            
+        }
+    }
+}
