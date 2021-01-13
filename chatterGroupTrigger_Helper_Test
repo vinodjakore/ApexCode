@@ -1,0 +1,71 @@
+/**
+* @name        : chatterGroupTrigger_Helper_Test
+* @author      : Vinod Jakore 
+* @date        : 05/03/2020
+* @description : Test class to test the chatterGroupTrigger_Helper class 
+*/
+
+@IsTest
+public class chatterGroupTrigger_Helper_Test {
+    
+    @IsTest
+    static void manageGroupMemberTest() {
+       // User us = TestFactory.createUser('Sales Rep','testUser', '0001');
+        
+        Profile tProfile = [SELECT Id FROM Profile WHERE Name= 'System Administrator'];
+		LIST<User> usersToInsert = new List<User>(); 
+        User newUser = new User(Alias = 'tUser', Email='test@test.com', EmailEncodingKey='UTF-8', LanguageLocaleKey='en_US', LocaleSidKey='en_US', ProfileId = tProfile.Id, TimeZoneSidKey='America/Los_Angeles' );
+        newUser.FirstName = 'Test';
+        newUser.LastName = 'testUser';
+        newUser.UserName = 'testUser7892122@test.com';
+       	usersToINsert.add(newUser);
+        
+        User newUser2 = new User(Alias = 'ApexUser', Email='testApex@test.com', EmailEncodingKey='UTF-8', LanguageLocaleKey='en_US', LocaleSidKey='en_US', ProfileId = tProfile.Id, TimeZoneSidKey='America/Los_Angeles' );
+        newUser2.FirstName = 'TestApex';
+        newUser2.LastName = 'test';
+        newUser2.UserName = 'testUser78922@test.com';
+        usersToINsert.add(newUser2);
+        insert usersToINsert;
+        
+        collaborationGroup chatterGroup = new collaborationGroup();
+        chatterGroup.Name= 'Apex Test Chatter Group';
+        chatterGroup.CollaborationType ='Public';
+        chatterGroup.OwnerId=newUser.id;
+        insert chatterGroup;
+        
+        
+        collaborationGroup chatterGroup2 = new collaborationGroup();
+        chatterGroup2.Name= 'Apex Test Chatter Group2';
+        chatterGroup2.CollaborationType ='Public';
+        chatterGroup2.OwnerId=newUser.id;
+        insert chatterGroup2;
+        
+        Group createGroup = new Group();
+        createGroup.Name ='Apex Test Chatter Group' ;
+        insert createGroup;
+        System.runAs(newUser) {
+       		 GroupMember gm = new GroupMember();
+       		 gm.GroupId = createGroup.Id;
+       		 gm.UserOrGroupId = newUser2.Id;
+       		 insert gm;
+        }
+        
+        CollaborationGroupMember chatterGroupMember = new CollaborationGroupMember();
+        chatterGroupMember.memberId = newUser2.Id;
+        chatterGroupMember.CollaborationGroupId = chatterGroup.Id ;
+        
+        Test.startTest();
+		insert chatterGroupMember;
+        Test.stopTest();  
+        
+        List<Group> groups = [SELECT Id ,Name FROM Group
+                              WHERE 
+                              Group.Name='Apex Test Chatter Group'
+                             ];
+        CollaborationGroupMember cgm = [SELECT Id From CollaborationGroupMember WHERE MemberId =:newUser2.id];
+        Delete cgm;
+        System.assertEquals(1, groups.size(), 'Expecting one public group');
+        
+    }   
+    
+}
