@@ -1,0 +1,30 @@
+/*************************************************************************************************************
+* @Trigger Name   : chatterGroupTrigger
+* @author         : Vinod Jakore
+* @CreatedDate -  : 05/03/2020 
+* @Description	  : Trigger code to handle after insert and after delete events on CollaborationGroupMember object
+*  					
+***************************************************************************************************************/
+
+trigger chatterGroupTrigger on CollaborationGroupMember (after insert, after delete ) {
+    
+    chatterGroupTrigger_Handler handler = new chatterGroupTrigger_Handler();
+    if( Trigger.isInsert )
+    {
+        if(Trigger.isAfter)
+        {
+            handler.afterInsert(Trigger.new);
+            
+        }
+        
+    }
+    else if ( Trigger.isDelete )
+    {
+        if(Trigger.isAfter)
+        {
+            handler.afterDelete(Trigger.old);
+            
+        }
+        
+    }
+}
